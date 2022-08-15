@@ -37,3 +37,9 @@ vignettes/*.pdf
 
 # R Environment Variables
 .Renviron
+
+# Mac Environment
+.DS_Store
+
+# Processed Data
+data_processed/
