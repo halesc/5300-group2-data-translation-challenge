@@ -17,4 +17,4 @@ industries = read_csv("./data_raw/indnames.csv")
 # Make colNames uppercase
 names(industries) <- toupper(names(industries))
 # Merge in Industry names
-merged_data = merge(cps_data, industries, by = "IND", all=FALSE)
+cps_data = merge(cps_data, industries, by = "IND", all=FALSE)
