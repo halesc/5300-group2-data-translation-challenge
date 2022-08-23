@@ -1,0 +1,38 @@
+---
+title: "Analysis: COVID Effect on Employment"
+author: "Group 2: Chris Hales"
+date: "`r Sys.Date()`"
+knit: (function(input, ...) {rmarkdown::render(input, output_file="../paper/analysis.html")})
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_knit$set(root.dir = rprojroot::find_rstudio_root_file())
+```
+
+## Research Questions
+
+
+## Libraries
+
+``` {r libraries, echo=FALSE}
+# Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+library(vtable)
+library(fixest)
+library(tidyverse)
+library(lubridate)
+```
+
+
+## Read in Data
+
+Bring in the processed data and store it in the schools variable. Filter on predominately bachelor degree schools. View the data.
+
+```{r schools}
+schools = read_csv("./data_processed/weekly_trends_with_school_scorecards_2022_08_04.csv")
+# Filter for colleges that primarily grant bachelors degrees. preddeg == 3.
+schools = schools %>% filter(preddeg == 3)
+vtable(schools)
+```
+
