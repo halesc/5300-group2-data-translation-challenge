@@ -13,6 +13,9 @@ knitr::opts_knit$set(root.dir = rprojroot::find_rstudio_root_file())
 
 ## Research Questions
 
+* How has COVID affected the health of the retail industry, as measured by employment?
+* How has retail fared relative to other industries?
+* Retail needs to worry about who has money to spend - what has changed about who is      working and earning money?
 
 ## Libraries
 
@@ -24,15 +27,17 @@ library(tidyverse)
 library(lubridate)
 ```
 
-
 ## Read in Data
 
 Bring in the processed data and store it in the schools variable. Filter on predominately bachelor degree schools. View the data.
 
-```{r schools}
-schools = read_csv("./data_processed/weekly_trends_with_school_scorecards_2022_08_04.csv")
-# Filter for colleges that primarily grant bachelors degrees. preddeg == 3.
-schools = schools %>% filter(preddeg == 3)
-vtable(schools)
+```{r data}
+question_1_data = read_csv("./data_processed/emp_count_by_retail_trade.csv")
+question_2_data = read_csv("./data_processed/emp_count_by_industry.csv")
+question_3_data = read_csv("./data_processed/cps_industry_and_demographic_data.csv")
+
+vtable(question_1_data)
+vtable(question_2_data)
+vtable(question_3_data)
 ```
 
