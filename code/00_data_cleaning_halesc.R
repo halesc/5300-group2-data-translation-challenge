@@ -92,6 +92,10 @@ merged_data = merged_data %>%
 write_csv(merged_data, "./data_processed/cps_industry_and_demographic_data.csv")
 # Make another quick access dataset that is just EMP counts at the YEARMONTH & INDNAME level.
 converted_data = merged_data %>% group_by(YEARMONTH, INDNAME) %>% summarize(sum(ISEMP))
+converted_data = converted_data %>% 
+  mutate(AFTERCOVID = case_when(YEARMONTH <= ymd("2020-02-01") ~ FALSE,
+                                YEARMONTH >= ymd("2020-06-01") ~ TRUE)) %>% 
+  drop_na(AFTERCOVID)
 vtable(converted_data)
 # This data can be used to answer question 2
 write_csv(converted_data, "./data_processed/emp_count_by_industry.csv")

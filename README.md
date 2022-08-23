@@ -5,4 +5,4 @@ Group 2:
 Danni Watkins,
 Julia Giesbrecht,
 Christian Smith,
-Chris Hales
+and Chris Hales
