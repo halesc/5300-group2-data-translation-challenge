@@ -82,23 +82,27 @@ merged_data = merged_data %>%
   mutate(AFTERCOVID = case_when(YEARMONTH <= ymd("2020-02-01") ~ FALSE,
                                 YEARMONTH >= ymd("2020-06-01") ~ TRUE)) %>% 
   drop_na(AFTERCOVID)
-vtable(merged_data)
-# Get counts relative to YEARMONTH and INDNAME for questions 1 and 2.
+# Get counts relative to YEARMONTH and INDNAME for questions 1 and 2. Remove
+# Military to focus on civilian workforce.
 merged_data = merged_data %>% 
-  group_by(YEARMONTH, INDNAME) %>% 
-  mutate(EMPCOUNT = sum(ISEMP))
+  group_by(YEAR, MONTH, YEARMONTH, INDNAME) %>% 
+  mutate(EMPCOUNT = sum(ISEMP)) %>%
+  filter(INDNAME != "Military")
+# Standardized by industry
+merged_data = merged_data %>% 
+  group_by(INDNAME) %>% 
+  mutate(EMPCOUNTSTD = (EMPCOUNT - mean(EMPCOUNT)) / sd(EMPCOUNT)) %>% 
+  select(!EMPCOUNT)
+vtable(merged_data)
 # This data can now be used with a binary dependent variable ISEMP to help
 # answer question 3.
 write_csv(merged_data, "./data_processed/cps_industry_and_demographic_data.csv")
-# Make another quick access dataset that is just EMP counts at the YEARMONTH & INDNAME level.
-converted_data = merged_data %>% group_by(YEARMONTH, INDNAME) %>% summarize(sum(ISEMP))
-converted_data = converted_data %>% 
-  mutate(AFTERCOVID = case_when(YEARMONTH <= ymd("2020-02-01") ~ FALSE,
-                                YEARMONTH >= ymd("2020-06-01") ~ TRUE)) %>% 
-  drop_na(AFTERCOVID)
-vtable(converted_data)
-# This data can be used to answer question 2
-write_csv(converted_data, "./data_processed/emp_count_by_industry.csv")
+# Make another quick access dataset that is just EMP counts at the YEAR, MONTH, YEARMONTH & INDNAME level.
+industry_data = merged_data %>% select(YEAR, MONTH, YEARMONTH, INDNAME, EMPCOUNTSTD)
+# This data can be used to answer question 2.
+write_csv(industry_data, "./data_processed/emp_count_std_by_industry.csv")
 # Make a dataset specific to retail
-retail_data = converted_data %>% filter(INDNAME == "Retail Trade")
-write_csv(retail_data, "./data_processed/emp_count_by_retail_trade.csv")
+retail_data = industry_data %>% filter(INDNAME == "Retail Trade")
+# This dataset can answer question 1.
+write_csv(retail_data, "./data_processed/emp_count_std_by_retail_trade.csv")
+
