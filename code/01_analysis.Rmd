@@ -17,6 +17,9 @@ knitr::opts_knit$set(root.dir = rprojroot::find_rstudio_root_file())
 * How has retail fared relative to other industries?
 * Retail needs to worry about who has money to spend - what has changed about who is      working and earning money?
 
+Assumptions
+A adult (over) civilian labor force. That the severe stay-at-home lock downs happened on roughly from 2022-03-01 until 2022-05-30.
+
 ## Libraries
 
 ``` {r libraries, echo=FALSE}
@@ -25,19 +28,65 @@ library(vtable)
 library(fixest)
 library(tidyverse)
 library(lubridate)
+library(marginaleffects)
 ```
 
 ## Read in Data
 
 Bring in the processed data and store it in the schools variable. Filter on predominately bachelor degree schools. View the data.
 
-```{r data}
-question_1_data = read_csv("./data_processed/emp_count_by_retail_trade.csv")
-question_2_data = read_csv("./data_processed/emp_count_by_industry.csv")
-question_3_data = read_csv("./data_processed/cps_industry_and_demographic_data.csv")
+```{r data read}
+data = read_csv("./data_processed/cps_industry_and_demographic_data.csv")
 
-vtable(question_1_data)
-vtable(question_2_data)
-vtable(question_3_data)
+vtable(data)
 ```
+# Seperate Data for Questions 1 and 2
+```{r data split}
+# This data can be used to answer question 2 and 1 at the YEARMONTH / INDNAME level.
+industry_data = data %>% group_by(YEAR, MONTH, YEARMONTH, INDNAME, EMPCOUNTSTD, AFTERCOVID) %>% summarise()
+
+# This dataset can answer question 1.
+retail_data = industry_data %>% filter(INDNAME == "Retail Trade")
+```
+
+# Question 1: 
+# How has COVID affected the health of the retail industry, as measured by employment?
+```{r}
+retail_reg = feols(retail_data, EMPCOUNTSTD ~ AFTERCOVID + i(MONTH) + i(YEAR))
+
+etable(retail_reg, keep=c("AFTERCOVID"))
+```
+# Check for Heteroskydasticity
+```{r}
+plot(fitted(retail_reg), resid(retail_reg))
+```
+# Wald Testing
+```{r}
+```
+
+
+# Question 2: 
+# How has retail fared relative to other industries?
+```{r}
+industry_reg = feols(industry_data, EMPCOUNTSTD ~ AFTERCOVID + INDNAME + AFTERCOVID*INDNAME + i(MONTH) + i(YEAR))
+
+etable(industry_reg, keep=c("AFTERCOVID", "INDNAME"))
+```
+# Check for Heteroskydasticity
+```{r}
+plot(fitted(industry_reg), resid(industry_reg))
+```
+# Wald Testing
+```{r}
+```
+
+
+# Question 3: 
+# Retail needs to worry about who has money to spend - what has changed about who is      working and earning money?
+```{r}
+worker_logit = feglm(data, ISEMP ~ AGE + SEX + EDUC + i(MONTH) + i(YEAR) | STATEFIP, weights = data$WTFINL, family = binomial(link = "logit"))
+
+etable(worker_logit, keep=c("AGE", "SEX", "EDUC"))
+```
+
 

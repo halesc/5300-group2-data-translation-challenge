@@ -19,6 +19,7 @@ industries = read_csv("./data_raw/indnames.csv")
 names(industries) = toupper(names(industries))
 # Merge in Industry names
 merged_data = merge(cps_data, industries, by = "IND", all=FALSE)
+vtable(merged_data)
 # Group EMPSTAT into binary groups: employed or not as ISEMP
 merged_data = merged_data %>% 
   mutate(ISEMP = case_when(EMPSTAT %in% c(10, 12) ~ TRUE,
@@ -27,7 +28,8 @@ merged_data = merged_data %>%
   drop_na(ISEMP)
 # This dataset will specifically keep industry and demographic data on workers. COVID
 # variable to be added later.
-merged_data = merged_data %>% select(YEAR, MONTH, INDNAME, ISEMP, AGE, SEX, EDUC)
+merged_data = merged_data %>% select(YEAR, MONTH, INDNAME, ISEMP, AGE, SEX, EDUC, 
+                                     STATEFIP, WTFINL)
 # Sanity Check.
 vtable(merged_data)
 # Make a YEAR/MONTH variable
@@ -70,7 +72,8 @@ merged_data = merged_data %>%
   mutate(INDNAME = factor(INDNAME)) %>% 
   mutate(AGE = factor(AGE)) %>% 
   mutate(SEX = factor(SEX)) %>% 
-  mutate(EDUC = factor(EDUC))
+  mutate(EDUC = factor(EDUC)) %>% 
+  mutate(STATEFIP = factor(STATEFIP))
 # Sanity Check
 vtable(merged_data)
 # The main research questions involve the effect of COVID breaking it into a before
@@ -97,11 +100,3 @@ vtable(merged_data)
 # This data can now be used with a binary dependent variable ISEMP to help
 # answer question 3.
 write_csv(merged_data, "./data_processed/cps_industry_and_demographic_data.csv")
-# Make another quick access dataset that is just EMP counts at the YEAR, MONTH, YEARMONTH & INDNAME level.
-industry_data = merged_data %>% select(YEAR, MONTH, YEARMONTH, INDNAME, EMPCOUNTSTD)
-# This data can be used to answer question 2.
-write_csv(industry_data, "./data_processed/emp_count_std_by_industry.csv")
-# Make a dataset specific to retail
-retail_data = industry_data %>% filter(INDNAME == "Retail Trade")
-# This dataset can answer question 1.
-write_csv(retail_data, "./data_processed/emp_count_std_by_retail_trade.csv")
