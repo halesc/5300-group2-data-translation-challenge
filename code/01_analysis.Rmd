@@ -1,6 +1,6 @@
 ---
 title: "Analysis: COVID Effect on Employment"
-author: "Group 2: Chris Hales"
+author: "Group 2"
 date: "`r Sys.Date()`"
 knit: (function(input, ...) {rmarkdown::render(input, output_file="../paper/analysis.html")})
 output: html_document
