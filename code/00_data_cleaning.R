@@ -105,4 +105,3 @@ write_csv(industry_data, "./data_processed/emp_count_std_by_industry.csv")
 retail_data = industry_data %>% filter(INDNAME == "Retail Trade")
 # This dataset can answer question 1.
 write_csv(retail_data, "./data_processed/emp_count_std_by_retail_trade.csv")
-
