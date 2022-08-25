@@ -88,5 +88,3 @@ worker_logit = feglm(data, ISEMP ~ AGE + SEX + EDUC + i(MONTH) + i(YEAR) | STATE
 
 etable(worker_logit, keep=c("AGE", "SEX", "EDUC"))
 ```
-
-
