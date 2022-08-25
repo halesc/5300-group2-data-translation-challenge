@@ -59,12 +59,12 @@ ggplot(retail_data, mapping = aes(EMPCOUNTSTD)) + geom_histogram(bins = 50)
 # Question 1: 
 # How has COVID affected the health of the retail industry, as measured by employment?
 ```{r}
-ggplot(retail_data, aes(x = YEARMONTH, y = EMPCOUNTSTD)) + geom_point() + geom_line() + geom_smooth(method = 'lm') + geom_vline(xintercept = as.Date("2020-03-01")) + xlab("Date (Year and Month)") + ylab("Standardized Employment Count") + ggtitle("Standardized Employment Count by Year and Month for the Retail Industry")
+ggplot(retail_data, aes(x = YEARMONTH, y = EMPCOUNTSTD)) + geom_point() + geom_line() + geom_smooth(method = 'lm') + geom_vline(xintercept = as.Date("2020-03-01")) + annotate("text", x = as.Date("2019-06-01"), y = 0.5, label=(paste0("slope ==", coef(lm(retail_data$EMPCOUNTSTD~retail_data$YEARMONTH))[2])), parse = TRUE) +  xlab("Date (Year and Month)") + ylab("Standardized Employment Count") + ggtitle("Standardized Employment Count by Year and Month for the Retail Industry") + annotate("text", x = as.Date("2020-09-01"), y = 2, label = "COVID_Pandemic", parse = TRUE)
 ```
 # Question 2: 
 # How has retail fared relative to other industries?
 ```{r}
-ggplot(industry_data, aes(x = YEARMONTH, y = EMPCOUNTSTD)) + geom_point() + geom_line() + geom_smooth(method = 'lm') + geom_vline(xintercept = as.Date("2020-03-01")) + facet_wrap(~INDNAME)
+ggplot(industry_data, aes(x = YEARMONTH, y = EMPCOUNTSTD)) + geom_point() + geom_line() + geom_smooth(method = 'lm') + geom_vline(xintercept = as.Date("2020-03-01")) +  + facet_wrap(~INDNAME)
 ```
 ```{r}
 ggplot(industry_data, aes(x = MONTH, y = EMPCOUNTSTD)) + geom_col()
