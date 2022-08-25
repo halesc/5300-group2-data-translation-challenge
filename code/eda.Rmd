@@ -1,0 +1,56 @@
+---
+title: "Analysis: COVID Effect on Employment"
+author: "Group 2"
+date: "`r Sys.Date()`"
+knit: (function(input, ...) {rmarkdown::render(input, output_file="../paper/analysis.html")})
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_knit$set(root.dir = rprojroot::find_rstudio_root_file())
+```
+
+## Research Questions
+
+* How has COVID affected the health of the retail industry, as measured by employment?
+* How has retail fared relative to other industries?
+* Retail needs to worry about who has money to spend - what has changed about who is      working and earning money?
+
+Assumptions
+A adult (over) civilian labor force. That the severe stay-at-home lock downs happened on roughly from 2022-03-01 until 2022-05-30.
+
+## Libraries
+
+``` {r libraries, echo=FALSE}
+# Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+library(vtable)
+library(fixest)
+library(tidyverse)
+library(lubridate)
+library(marginaleffects)
+library(grid)
+```
+
+## Read in Data
+
+Bring in the processed data and store it in the schools variable. Filter on predominately bachelor degree schools. View the data.
+
+```{r data read}
+data = read_csv("./data_processed/cps_industry_and_demographic_data.csv")
+
+```
+# Seperate Data for Questions 1 and 2
+```{r data split}
+# This data can be used to answer question 2 and 1 at the YEARMONTH / INDNAME level.
+industry_data = data %>% group_by(YEAR, MONTH, YEARMONTH, INDNAME, EMPCOUNTSTD, AFTERCOVID) %>% summarise()
+
+# This dataset can answer question 1.
+retail_data = industry_data %>% filter(INDNAME == "Retail Trade") 
+```
+
+# Question 1: 
+# How has COVID affected the health of the retail industry, as measured by employment?
+```{r}
+ggplot(retail_data, aes(x = YEARMONTH, y = EMPCOUNTSTD)) + geom_point() + geom_line() + geom_smooth(method = 'lm') + geom_vline(xintercept = as.Date("2020-03-01")) + xlab("Date (Year and Month)") + ylab("Standardized Employment Count") + ggtitle("Standardized Employment Count by Year and Month for the Retail Industry")
+```
