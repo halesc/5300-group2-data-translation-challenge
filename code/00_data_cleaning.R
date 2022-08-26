@@ -8,8 +8,8 @@ library(vtable)
 library(tidyverse)
 library(lubridate)
 # Read the IPUMS Data
-cps_ddi_file = "./data_raw/cps_00002.xml"
-cps_data_file = "./data_raw/cps_00002.dat"
+cps_ddi_file = "./data_raw/cps_00003.xml"
+cps_data_file = "./data_raw/cps_00003.dat"
 # Contains metadata, nice to have as separate object
 cps_ddi = read_ipums_ddi(cps_ddi_file) 
 cps_data = read_ipums_micro(cps_ddi_file, data_file = cps_data_file)
@@ -87,10 +87,12 @@ merged_data = merged_data %>%
   drop_na(AFTERCOVID)
 # Get counts relative to YEARMONTH and INDNAME for questions 1 and 2. Remove
 # Military to focus on civilian workforce.
+# Remove march as its a major outlier in the data.
 merged_data = merged_data %>% 
   group_by(YEAR, MONTH, YEARMONTH, INDNAME) %>% 
   mutate(EMPCOUNT = sum(ISEMP)) %>%
-  filter(INDNAME != "Military")
+  filter(INDNAME != "Military") %>% 
+  filter(MONTH != 3)
 # Standardized by industry
 merged_data = merged_data %>% 
   group_by(INDNAME) %>% 
