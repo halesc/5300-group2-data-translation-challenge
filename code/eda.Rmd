@@ -48,6 +48,20 @@ industry_data = data %>% group_by(YEAR, MONTH, YEARMONTH, INDNAME, EMPCOUNTSTD, 
 # This dataset can answer question 1.
 retail_data = industry_data %>% filter(INDNAME == "Retail Trade") 
 ```
+Run sumtables of all the data. 
+```{r}
+sumtable(data)
+```
+
+```{r}
+sumtable(industry_data)
+```
+
+```{r}
+sumtable(retail_data)
+```
+
+
 ```{r}
 ggplot(industry_data, mapping = aes(EMPCOUNTSTD)) + geom_histogram(bins = 50) + xlab("Standardized Employee Count") + ggtitle("Standardized Employment Count Histogram")
 ```
