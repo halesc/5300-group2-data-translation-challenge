@@ -1,0 +1,156 @@
+---
+title: "Analysis: COVID Effect on Employment"
+author: "Group 2"
+date: "`r Sys.Date()`"
+knit: (function(input, ...) {rmarkdown::render(input, output_file="../paper/analysis.html")})
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_knit$set(root.dir = rprojroot::find_rstudio_root_file())
+```
+
+## Research Questions
+
+* How has COVID affected the health of the retail industry, as measured by employment?
+* How has retail fared relative to other industries?
+* Retail needs to worry about who has money to spend - what has changed about who is      working and earning money?
+
+Assumptions
+A adult (over) civilian labor force. That the severe stay-at-home lock downs happened on roughly from 2022-03-01 until 2022-05-30.
+
+## Libraries
+
+``` {r libraries, echo=FALSE}
+# Note that the `echo = FALSE` parameter was added to the code chunk to prevent printing of the R code that generated the plot.
+library(vtable)
+library(fixest)
+library(tidyverse)
+library(lubridate)
+library(marginaleffects)
+library(grid)
+```
+
+## Read in Data
+
+Bring in the processed data and store it in the schools variable. Filter on predominately bachelor degree schools. View the data.
+
+```{r data read}
+data = read_csv("./data_processed/cps_industry_and_demographic_data.csv")
+```
+# Seperate Data for Questions 1 and 2
+```{r data split}
+# This data can be used to answer question 2 and 1 at the YEARMONTH / INDNAME level.
+industry_data = data %>% group_by(YEAR, MONTH, YEARMONTH, INDNAME, EMPCOUNTSTD, AFTERCOVID) %>% summarise() 
+# This dataset can answer question 1.
+retail_data = industry_data %>% filter(INDNAME == "Retail Trade") 
+```
+Run sumtables of all the data. 
+```{r}
+sumtable(data)
+```
+
+```{r}
+sumtable(industry_data)
+```
+
+```{r}
+sumtable(retail_data)
+```
+
+
+```{r}
+ggplot(industry_data, mapping = aes(EMPCOUNTSTD)) + geom_histogram(bins = 50) + xlab("Standardized Employee Count") + ggtitle("Standardized Employment Count Histogram")
+```
+Data is bimodal based on the count of standardized employment. Seeing employment peak in both positive and negative ranges. 
+
+```{r}
+ggplot(retail_data, mapping = aes(EMPCOUNTSTD)) + geom_histogram(bins = 50) + xlab("Standardized Employee Count for Retail") + ggtitle("Standardized Employment Count Histogram for Retail Industry")
+```
+Multimodal distribution when looking at distribution of standardized employee count for retail. Retail is seasonal which could contribute partially to this multimodal distribution. 
+
+# Question 1: 
+# How has COVID affected the health of the retail industry, as measured by employment?
+```{r}
+ggplot(retail_data, aes(x = YEARMONTH, y = EMPCOUNTSTD)) + geom_point() + geom_line() + geom_smooth(method = 'lm') + geom_vline(xintercept = as.Date("2020-03-01")) + annotate("text", x = as.Date("2019-06-01"), y = 0, label=(paste0("slope ==", coef(lm(retail_data$EMPCOUNTSTD~retail_data$YEARMONTH))[2])), parse = TRUE) +  xlab("Date (Year and Month)") + ylab("Standardized Employment Count") + ggtitle("Standardized Employment Count by Year and Month for the Retail Industry") + annotate("text", x = as.Date("2020-09-01"), y = 2, label = "COVID_Pandemic", parse = TRUE)
+```
+Unsurprisingly we see employment take a large dip right after the COVID pandemic began for the retail industrt. Relative to years before retail industry employment is decreasing even after it spiked back up again in late 2020. Wondering if this could be due to things such as lack of benefits and the overall low wage associate with working in retail. 
+
+# Question 2: 
+# How has retail fared relative to other industries?
+```{r}
+ggplot(industry_data, aes(x = YEARMONTH, y = EMPCOUNTSTD)) + geom_point() + geom_line() + geom_smooth(method = 'lm') + geom_vline(xintercept = as.Date("2020-03-01")) + facet_wrap(INDNAME~.) + xlab("Date (Year and Month)") + ylab("Standardized Employee Count") + ggtitle("Standardized Employment Count by Year and Month")
+```
+Almost all industries seemed to be on the decline prior to the COVID pandemic but in most industries we see sharp decreases around the time the pandemic began. Retail seems to have one of the sharper decreases, however it is not as sharp as transportation and warehousing. Forestry, Fishing, and Hunting along with Health Care seem to have the least decreases during this time. These industries are fairly broad in their descriptions so it would be interesting to see how very specific industries faired.
+
+```{r}
+ggplot(industry_data, aes(x = MONTH, y = EMPCOUNTSTD)) + geom_col() + xlab("Month") + ylab("Standardized Employee Count") + ggtitle("Standardized Employment Count based on Month")
+```
+Removed March due to it being an outlier and skewing data. We see here that based on month employment is lowers in June and July before starting to increase again August through January before it peaks in February. Some of this may be due to holiday seasons and other factors like school along with things like tax season. 
+```{r}
+ggplot(retail_data, aes(x = MONTH, y = EMPCOUNTSTD)) + geom_col() + xlab("Month") + ylab("Standardized Employee Count for Retail") + ggtitle("Standardized Employment Count based on Month for Retail")
+```
+Removed March due to it being an outlier and skewing data. For retail specifically, we see similar patterns as above. There is more of a peak around October/November which makes sense since this is right before the holiday season. The peak month for employment however is January. 
+
+
+# Question 3: 
+# Retail needs to worry about who has money to spend - what has changed about who is working and earning money?
+```{r}
+sex_data = data %>% 
+  group_by(YEAR, MONTH, YEARMONTH, SEX) %>% 
+  summarize(EMPCOUNT = median(EMPCOUNTSTD))
+ggplot(sex_data, aes(x = YEARMONTH, y = EMPCOUNT, color = SEX)) + geom_point() + geom_line() + geom_vline(xintercept = as.Date("2020-03-01")) +  xlab("Date (Year and Month)") + ylab("Standardized Employment Count") + ggtitle("Standardized Employment Count by Year and Month by Sex") + annotate("text", x = as.Date("2020-11-01"), y = 2, label = "COVID_Pandemic", parse = TRUE)
+```
+
+```{r}
+ggplot(sex_data, aes(x = YEARMONTH, y = EMPCOUNT, color = SEX)) + geom_point() + geom_line() + geom_vline(xintercept = as.Date("2020-03-01")) +  xlab("Date (Year and Month)") + ylab("Standardized Employment Count") + ggtitle("Standardized Employment Count by Year and Month by Sex") + annotate("text", x = as.Date("2020-11-01"), y = 2, label = "COVID_Pandemic", parse = TRUE) +  geom_smooth(method = 'lm')
+```
+
+```{r}
+ggplot(sex_data, aes(x = YEARMONTH, y = EMPCOUNT)) + geom_point() + geom_line() + geom_vline(xintercept = as.Date("2020-03-01")) +  xlab("Date (Year and Month)") + ylab("Standardized Employment Count") + ggtitle("Standardized Employment Count by Year and Month by Sex") + annotate("text", x = as.Date("2021-3-01"), y = 2, label = "COVID_Pandemic", parse = TRUE) + geom_smooth(method = 'lm') + facet_wrap(~SEX)
+```
+In the above 3 plots we see the standardized employment for both males and females drop significantly once the pandemic began. It is worth noting here that we saw a lesser decline in females than we did in males at the start of the pandemic. Although, both sexes were seeing a general decline prior to the pandemic and continuing through it. 
+
+```{r}
+educ_data = data %>% 
+  group_by(YEAR, MONTH, YEARMONTH, EDUC) %>% 
+  summarize(EMPCOUNT = median(EMPCOUNTSTD))
+ggplot(educ_data, aes(x = YEARMONTH, y = EMPCOUNT, color = EDUC)) + geom_point() + geom_line() + geom_vline(xintercept = as.Date("2020-03-01")) +  xlab("Date (Year and Month)") + ylab("Standardized Employment Count") + ggtitle("Standardized Employment Count by Year and Month by Education") + annotate("text", x = as.Date("2020-11-01"), y = 2, label = "COVID_Pandemic", parse = TRUE)
+```
+
+```{r}
+ggplot(educ_data, aes(x = YEARMONTH, y = EMPCOUNT, color = EDUC)) + geom_point() + geom_line() + geom_smooth(method = 'lm') + geom_vline(xintercept = as.Date("2020-03-01")) +  xlab("Date (Year and Month)") + ylab("Standardized Employment Count") + ggtitle("Standardized Employment Count by Year and Month by Education Level") + annotate("text", x = as.Date("2020-11-01"), y = 2, label = "COVID_Pandemic", parse = TRUE)
+```
+
+```{r}
+ggplot(educ_data, aes(x = YEARMONTH, y = EMPCOUNT)) + geom_point() + geom_line() + geom_vline(xintercept = as.Date("2020-03-01")) +  xlab("Date (Year and Month)") + ylab("Standardized Employment Count") + ggtitle("Standardized Employment Count by Year and Month by Education") + geom_smooth(method = 'lm') + facet_wrap(~EDUC)
+```
+Looking at how education level effected employment in the pandemic we see all education levels on a steady decrease, however we see that the sharpest decreases in employment after the pandemic began were in individuals with a high school diploma or no diploma at all. 
+
+```{r}
+age_data = data %>% 
+  group_by(YEAR, MONTH, YEARMONTH, AGE) %>% 
+  summarize(EMPCOUNT = median(EMPCOUNTSTD))
+```
+
+```{r}
+ggplot(age_data, aes(x = YEARMONTH, y = EMPCOUNT, color = AGE)) + geom_point() + geom_line() + geom_vline(xintercept = as.Date("2020-03-01")) +  xlab("Date (Year and Month)") + ylab("Standardized Employment Count") + ggtitle("Standardized Employment Count by Year and Month by Age") + annotate("text", x = as.Date("2020-11-01"), y = 2, label = "COVID_Pandemic", parse = TRUE)
+```
+
+```{r}
+ggplot(age_data, aes(x = YEARMONTH, y = EMPCOUNT, color = AGE)) + geom_point() + geom_line() + geom_smooth(method = 'lm') + geom_vline(xintercept = as.Date("2020-03-01")) +  xlab("Date (Year and Month)") + ylab("Standardized Employment Count") + ggtitle("Standardized Employment Count by Year and Month by Age") + annotate("text", x = as.Date("2020-11-01"), y = 2, label = "COVID_Pandemic", parse = TRUE)
+```
+
+```{r}
+ggplot(age_data, aes(x = YEARMONTH, y = EMPCOUNT)) + geom_point() + geom_line() + geom_vline(xintercept = as.Date("2020-03-01")) +  xlab("Date (Year and Month)") + ylab("Standardized Employment Count") + ggtitle("Standardized Employment Count by Year and Month by Age") + geom_smooth(method = 'lm') + facet_wrap(~AGE)
+```
+Like all other demographics we see employment based on age in a steady decrease both prior to and post COVID pandemic. We also see that the younger age groups seem to have the sharpest decline once the pandemic began. 
+
+```{r}
+state_data = data %>% 
+  group_by(YEAR, MONTH, YEARMONTH, STATEFIP) %>% 
+  summarize(EMPCOUNT = median(EMPCOUNTSTD))
+ggplot(state_data, aes(x = STATEFIP, y = EMPCOUNT)) + geom_col() + xlab("State Code") + ylab("Standardized Employee Count") + ggtitle("Standardized Employment Count based on State")
+```
+Lastly, we looked at employment by state and saw that overall there wasn't a whole lot of variance state to state.
