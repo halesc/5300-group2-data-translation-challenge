@@ -43,7 +43,7 @@ data = read_csv("./data_processed/cps_industry_and_demographic_data.csv")
 # Seperate Data for Questions 1 and 2
 ```{r data split}
 # This data can be used to answer question 2 and 1 at the YEARMONTH / INDNAME level.
-industry_data = data %>% group_by(YEAR, MONTH, YEARMONTH, INDNAME, EMPCOUNTSTD, AFTERCOVID) %>% summarise()
+industry_data = data %>% group_by(YEAR, MONTH, YEARMONTH, INDNAME, EMPCOUNTSTD, AFTERCOVID) %>% summarise() 
 
 # This dataset can answer question 1.
 retail_data = industry_data %>% filter(INDNAME == "Retail Trade") 
@@ -64,7 +64,7 @@ ggplot(retail_data, aes(x = YEARMONTH, y = EMPCOUNTSTD)) + geom_point() + geom_l
 # Question 2: 
 # How has retail fared relative to other industries?
 ```{r}
-ggplot(industry_data, aes(x = YEARMONTH, y = EMPCOUNTSTD)) + geom_point() + geom_line() + geom_smooth(method = 'lm') + geom_vline(xintercept = as.Date("2020-03-01")) +  + facet_wrap(~INDNAME)
+ggplot(industry_data, aes(x = YEARMONTH, y = EMPCOUNTSTD)) + geom_point() + geom_line() + geom_smooth(method = 'lm') + geom_vline(xintercept = as.Date("2020-03-01")) + facet_wrap(~INDNAME)
 ```
 ```{r}
 ggplot(industry_data, aes(x = MONTH, y = EMPCOUNTSTD)) + geom_col()
@@ -77,7 +77,35 @@ ggplot(retail_data, aes(x = MONTH, y = EMPCOUNTSTD)) + geom_col()
 # Question 3: 
 # Retail needs to worry about who has money to spend - what has changed about who is working and earning money?
 ```{r}
+sex_data = data %>% 
+  group_by(YEAR, MONTH, YEARMONTH, SEX) %>% 
+  summarize(EMPCOUNT = median(EMPCOUNTSTD))
+
+ggplot(sex_data, aes(x = YEARMONTH, y = EMPCOUNT, color = SEX)) + geom_point() + geom_line() + geom_smooth(method = 'lm') + geom_vline(xintercept = as.Date("2020-03-01")) +  xlab("Date (Year and Month)") + ylab("Standardized Employment Count") + ggtitle("Standardized Employment Count by Year and Month by Sex") + annotate("text", x = as.Date("2020-09-01"), y = 2, label = "COVID_Pandemic", parse = TRUE)
 
 ```
+```{r}
+educ_data = data %>% 
+  group_by(YEAR, MONTH, YEARMONTH, EDUC) %>% 
+  summarize(EMPCOUNT = median(EMPCOUNTSTD))
 
+ggplot(educ_data, aes(x = YEARMONTH, y = EMPCOUNT, color = EDUC)) + geom_point() + geom_line() + geom_smooth(method = 'lm') + geom_vline(xintercept = as.Date("2020-03-01")) +  xlab("Date (Year and Month)") + ylab("Standardized Employment Count") + ggtitle("Standardized Employment Count by Year and Month by Education Level") + annotate("text", x = as.Date("2020-09-01"), y = 2, label = "COVID_Pandemic", parse = TRUE)
+```
+
+```{r}
+ggplot(educ_data, aes(x = EDUC, y = EMPCOUNT)) + geom_col()
+```
+```{r}
+age_data = data %>% 
+  group_by(YEAR, MONTH, YEARMONTH, AGE) %>% 
+  summarize(EMPCOUNT = median(EMPCOUNTSTD))
+
+ggplot(age_data, aes(x = YEARMONTH, y = EMPCOUNT, color = AGE)) + geom_point() + geom_line() + geom_smooth(method = 'lm') + geom_vline(xintercept = as.Date("2020-03-01")) +  xlab("Date (Year and Month)") + ylab("Standardized Employment Count") + ggtitle("Standardized Employment Count by Year and Month by Age") + annotate("text", x = as.Date("2020-09-01"), y = 2, label = "COVID_Pandemic", parse = TRUE)
+```
+```{r}
+state_data = data %>% 
+  group_by(YEAR, MONTH, YEARMONTH, STATEFIP) %>% 
+  summarize(EMPCOUNT = median(EMPCOUNTSTD))
+ggplot(state_data, aes(x = STATEFIP, y = EMPCOUNT)) + geom_col()
+```
 
