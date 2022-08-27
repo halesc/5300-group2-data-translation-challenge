@@ -18,7 +18,7 @@ knitr::opts_knit$set(root.dir = rprojroot::find_rstudio_root_file())
 * Retail needs to worry about who has money to spend - what has changed about who is      working and earning money?
 
 Assumptions
-A adult (over) civilian labor force. That the severe stay-at-home lock downs happened on roughly from 2022-03-01 until 2022-05-30.
+A adult (over) civilian labor force. That the severe stay-at-home lock downs happened on roughly from 2020-03-01 until 2020-05-30.
 
 ## Libraries
 
@@ -31,60 +31,264 @@ library(lubridate)
 library(marginaleffects)
 ```
 
+## Data Cleaning:
+
+While working through the data we had a couple different approaches and ideas to how we wanted to measure the retail industry during and after COVID. In terms of purely cleaning up the data and getting it to a state where we felt was optimized for analysis, we did some basic cleanup, standardization, and merging to make sure our data file had everything we wanted for the analysis. The first big transformation we did was creating a binary variable for whether or not someone was employed which was through grouping together "EMPSTAT" and separating them out based on their status and for the initial research question we dropped all the unemployed entries so we could solely measure the change in employment. We then created a month/year variable and removed all workers under 18 years old as we wanted to take a look at the impact of adults as the change for children we expected to impact the overall data. Next, we wanted to have a variable for education level as that is certainly something that was going to impact not only the type of job someone has, but the level of job security they had during the pandemic. We created a variable separated out by no diploma, high school degree, associates degree, bachelors degree, masters degree, and doctorate degree where we identified whether they had at least that level of degree. We then grouped together common identified age ranges so we could get a sense of what age group was affected the most severely if any. These were done in age groups 18-24, 25-34, 35-44, 45-54, 55-64, and 65+. Lastly we needed to create a variable to identify pre and post covid. Through our initial exploration, we found a site that showed March, April, and May of 2020 should not be included as that was the majority of the time where there was stay at home orders, so we created a pre March 2020 and post May 2020 variable for before and after covid. After doing this we felt that we had the data in a clean state to do some modeling and begin to answer the research questions below. 
+
+
 ## Read in Data
 
-Bring in the processed data and store it in the schools variable. Filter on predominately bachelor degree schools. View the data.
+Bring in processed data, view data, and look at summary statistics. 
 
 ```{r data read}
 data = read_csv("./data_processed/cps_industry_and_demographic_data.csv")
 
 vtable(data)
+# sumtable(data)
 ```
 # Seperate Data for Questions 1 and 2
 ```{r data split}
 # This data can be used to answer question 2 and 1 at the YEARMONTH / INDNAME level.
 industry_data = data %>% group_by(YEAR, MONTH, YEARMONTH, INDNAME, EMPCOUNTSTD, AFTERCOVID) %>% summarise()
 
-# This dataset can answer question 1.
+# This data set can answer question 1.
 retail_data = industry_data %>% filter(INDNAME == "Retail Trade")
 ```
+
+```{r}
+ggplot(industry_data, mapping = aes(EMPCOUNTSTD)) + geom_histogram(bins = 50) + xlab("Standardized Employee Count") + ggtitle("Standardized Employment Count Histogram")
+
+```
+  
+  Data is bimodal based on the count of standardized employment. Seeing employment peak in both positive and negative ranges. 
 
 # Question 1: 
 # How has COVID affected the health of the retail industry, as measured by employment?
 ```{r}
-retail_reg = feols(retail_data, EMPCOUNTSTD ~ AFTERCOVID + i(MONTH) + i(YEAR))
+ggplot(retail_data, aes(x = YEARMONTH, y = EMPCOUNTSTD)) + geom_point() + geom_line() + geom_smooth(method = 'lm') + geom_vline(xintercept = as.Date("2020-03-01")) + annotate("text", x = as.Date("2019-06-01"), y = 0, label=(paste0("slope ==", coef(lm(retail_data$EMPCOUNTSTD~retail_data$YEARMONTH))[2])), parse = TRUE) +  xlab("Date (Year and Month)") + ylab("Standardized Employment Count") + ggtitle("Standardized Employment Count by Year and Month for the Retail Industry") + annotate("text", x = as.Date("2020-09-01"), y = 2, label = "COVID_Pandemic", parse = TRUE)
+```
+  
+  Unsurprisingly we see employment take a large dip right after the COVID pandemic began for the retail industry. Even prior to COVID it can be seen that there is a general decrease in employment. This could be due to things such as lack of benefits and the overall low wage associate with working in retail along with the popularity of e-commerce. 
 
+The generalized linear model below regresses the standardized employment count in retail on whether it was before or after covid. AFTERCVOID is a binary variable with pre March 2020 as before and post May 2020 as after covid in accordance to how we have chosen to define pre and post covid. EMPCOUNTSTD is the count of how many people were employed in the retail industry at a given time (year/month), and was standardized across industries to scale the data to better compare between the different industries. We are controlling for both month and year as factor variables to address seasonality. Controlling the month and year would solve the endogeneity problem so we can see the true effect of covid on retail employment.
+
+```{r}
+retail_reg = feols(retail_data, EMPCOUNTSTD ~ AFTERCOVID + i(MONTH) + i(YEAR))
 etable(retail_reg, keep=c("AFTERCOVID"))
 ```
 # Check for Heteroskydasticity
+
+We are getting the residuals out of the model. The variance of the residuals before covid is 0.0365, and after it is 0.311. There is more unexplained variation from after covid than before. The results show a difference across the x-axis, therefore we have heteroskedasticity in the model. The model should use heteroskedasticity-robust standard errors in the model.
+
 ```{r}
 plot(fitted(retail_reg), resid(retail_reg))
+
+retail_data$resid <- resid(retail_reg)
+retail_data %>% 
+  group_by(AFTERCOVID) %>%
+  summarize(variance_of_resid = var(resid))
+
 ```
-# Wald Testing
+
+# Wald Testing and model 2
+
+This is the original model with heteroskedasticity-robust standard errors in the model.
+
+In this question, we are looking at only retail data where we are interested in the effect of how covid impacted the health of the retail industry by measuring the change in employment before and after covid. The average standardized employment count for before covid was 1.302 and after covid was -0.134 while holding month and year constant. Therefore, while holding month and year constant, we can see that on average comparing before to after covid, the employment count in retail reduced by 1.436 standard-deviation change. All coefficients are statistically significant. 
+
+Based on our Wald test, we can say that covid does in fact have an impact on retail employment.
+
+In conclusion, to answer the research question, covid has negatively effected the health of retail because when comparing before to after covid there was a reduction in employment in the industry. This indicates reduced health because we are measuring retail health by employment.
+
+Y = a + bX
+EMPCOUNTSTD =  1.302 + (-1.436) * AFTERCOVID
+EMPCOUNTSTD =  1.302 + (-1.436) * True (1) = -0.134
+EMPCOUNTSTD =  1.302 + (-1.436) * False (0) = 1.302
+
+
 ```{r}
+retail_reg = feols(retail_data, EMPCOUNTSTD ~ AFTERCOVID + i(MONTH) + i(YEAR), vcov = 'hetero')
+#etable(retail_reg)
+etable(retail_reg, keep=c("AFTERCOVID"))
+wald(retail_reg, 'AFTERCOVID')
+
+
 ```
 
 
 # Question 2: 
 # How has retail fared relative to other industries?
+
+```{r}
+ggplot(industry_data, aes(x = YEARMONTH, y = EMPCOUNTSTD)) + geom_point() + geom_line() + geom_smooth(method = 'lm') + geom_vline(xintercept = as.Date("2020-03-01")) + facet_wrap(INDNAME~.) + xlab("Date (Year and Month)") + ylab("Standardized Employee Count") + ggtitle("Standardized Employment Count by Year and Month")
+```
+  
+  Almost all industries seemed to be on the decline prior to the COVID pandemic but in most industries we see sharp decreases around the time the pandemic began. Retail seems to have one of the sharper decreases, however it is not as sharp as transportation and warehousing. Forestry, Fishing, and Hunting along with Health Care seem to have the least decreases during this time. These industries are fairly broad in their descriptions so it would be interesting to see how very specific industries faired.
+
+To answer the research question on how retail fared relative to other industries, we must look at the impact covid had on employment in all industries to compare. In this question the dependent variable is the employment count grouped by industries and was standardized across industries. The independent variables for this case would be the factors that impact the employment count. That includes the before/after covid variable as seen before and the industry as a categorical variable in the first model and a binary varaible for ratail vs all other industries in the second.
+
+The relationship between employment and industry is different, whether it was before or after covid. We interpreted this as needing an interaction term in the regression model.
+The relationship between X and  Y is different for different values of Z. To run the regression, we include X*Z  in the model and Z by itself. We  also added controls for the month and year in the model to address seasonality and endogeneity like in question 1.
+
+# Model 1
 ```{r}
 industry_reg = feols(industry_data, EMPCOUNTSTD ~ AFTERCOVID + INDNAME + AFTERCOVID*INDNAME + i(MONTH) + i(YEAR))
 
 etable(industry_reg, keep=c("AFTERCOVID", "INDNAME"))
 ```
-# Check for Heteroskydasticity
+
+# model 2
+# Regression model comparing retail to all other industries
 ```{r}
-plot(fitted(industry_reg), resid(industry_reg))
-```
-# Wald Testing
-```{r}
+industry_data_2 <- industry_data %>%
+  mutate(RETAIL = case_when(INDNAME != 'Retail Trade' ~ FALSE, INDNAME == 'Retail Trade' ~ TRUE)) %>%
+  group_by(YEAR, MONTH, YEARMONTH, RETAIL, AFTERCOVID)%>% 
+  summarise(AVGEMPCOUNTSTD = mean(EMPCOUNTSTD))
+
+ggplot(industry_data_2, aes(x = YEARMONTH, y = AVGEMPCOUNTSTD, color = RETAIL)) + geom_point() + geom_line() + geom_smooth(method = 'lm') + geom_vline(xintercept = as.Date("2020-03-01")) + facet_wrap(RETAIL~.) + xlab("Date (Year and Month)") + ylab("Standardized Employee Count") + ggtitle("Standardized Employment Count by Year and Month in Retail vs. Not Retail")
 ```
 
+In model 2, we averaged the standardized employment count for retail vs all other industries to compare between retail and all other industries to see how retail fared comparatively before and after covid. 
+
+
+```{r}
+# Creating variable for retail and not retail and averaging the employment count for each group.
+
+industry_reg_2 = feols(industry_data_2, AVGEMPCOUNTSTD ~ AFTERCOVID + RETAIL + AFTERCOVID*RETAIL + i(MONTH) + i(YEAR))
+
+etable(industry_reg_2, keep=c("AFTERCOVID", "INDNAME"))
+
+
+```
+
+# Check for Heteroskydasticity
+
+Both models require heteroskedasticity-robust standard errors because the results show a difference across the x-axis, therefore we have heteroskedasticity in the model. The models should use heteroskedasticity-robust standard errors in the model.
+```{r}
+# model 1
+plot(fitted(industry_reg), resid(industry_reg))
+
+industry_data$resid <- resid(industry_reg)
+industry_data %>% 
+  group_by(AFTERCOVID) %>%
+  summarize(variance_of_resid = var(resid))
+
+
+# model 2
+plot(fitted(industry_reg_2), resid(industry_reg_2))
+
+industry_data_2$resid <- resid(industry_reg_2)
+industry_data_2%>% 
+  group_by(AFTERCOVID) %>%
+  summarize(variance_of_resid = var(resid))
+```
+# Original models with heteroskedasticity-robust standard errors and wald Testing
+Model 1:
+
+We had a large categorical variable and we decided to change this model to compare just retail vs not retail to simplify the model.
+
+Model 2:
+
+Linear regression model with interaction: Y = β0 + β1 X1 + β2 X2 + β3 X1X2
+EMPCOUNTSTD =    1.172 + (-1.582) AFTERCOVID + (-0.0183)RETAIL +  0.0290 AFTERCOVID* RETAIL
+
+The average standardized employment count on non retail industries and before covid is 1.172 standard-deviation change while holding month and year constant and is statistically significant.
+
+-1.582 is the difference in the average standardized employment count between before and after covid and non retail industries. Therefore, for non retail industries, after covid they are expected to decrease by 1.582 standard-deviation change in average employment count compared to before covid while holding month and year constant and is statistically significant.
+ 
+-0.0183 is the difference in the average standardized employment count between retail and all other industries before covid. Therefore, before covid was present, retail industries were expected to decrease the average standardized employment count by -0.0183 standard-deviation change compared to all other industries, while holding the months and year constant and is statistically significant.
+
+(-1.582) + 0.0290 = -1.553
+After covid, retail is expected to decrease by 1.553 index standard-deviation change in employment compared to before covid while holding month and year constant.
+
+The wald tests for both models indicates that industries and retail have an inpact.
+
+
+In summary, the effect of covid on average standardized employment count is -1.582 standard-deviation change for non retail industries, and the effect of covid on average standardized employment count is -1.553 for retail, while holding the month and year constant. The difference between those two effects for retail and non retail is 0.0290 standard-deviation change employment count while holding the month and year constant. The effect of covid on standard-deviation change employment count is slightly higher for non retail than for retail industries while holding the month an year constant. Therefore, covid negatively affected retail and non retail industries; however, there was more of a negative effect on non retail industries than on retail industries.
+
+In conclusion, to answer the research question, how has retail fared relative to other industries?, As we can see from the analysis, the impact of covid reduced employment in all industries, and comparing retail to other industries, covid had a more significant adverse effect on non retail industries.
+
+
+```{r}
+# Model 1
+industry_reg = feols(industry_data, EMPCOUNTSTD ~ AFTERCOVID + INDNAME + AFTERCOVID*INDNAME + i(MONTH) + i(YEAR), vcov = 'hetero')
+wald(industry_reg,'AFTERCOVID', 'INDNAME')
+etable(industry_reg, keep=c("AFTERCOVID", "INDNAME"))
+
+
+# Model 2
+industry_reg_2 = feols(industry_data_2, AVGEMPCOUNTSTD ~ AFTERCOVID + RETAIL + AFTERCOVID*RETAIL + i(MONTH) + i(YEAR), vcov = 'hetero')
+wald(industry_reg_2,'AFTERCOVID', 'RETAIL')
+etable(industry_reg_2)
+etable(industry_reg_2, keep=c("AFTERCOVID", "RETAIL"))
+
+```
 
 # Question 3: 
-# Retail needs to worry about who has money to spend - what has changed about who is      working and earning money?
-```{r}
-worker_logit = feglm(data, ISEMP ~ AGE + SEX + EDUC + i(MONTH) + i(YEAR) | STATEFIP, weights = data$WTFINL, family = binomial(link = "logit"))
+# Retail needs to worry about who has money to spend - what has changed about who is working and earning money?
 
-etable(worker_logit, keep=c("AGE", "SEX", "EDUC"))
+For question 3, to understand who has money to spend we decided to look at whether or not that individual is employed or not. If they are employed, this will indicate that they will have money to spend compared to those who are not employed. We also want to understand what has changed about those who are working and earning money, whether that be age group, sex, education level. In this regression, the dependent variable ISEMP is a binary variable for if an individual is employed or not, and the independent variables are age, sex and education as categorical. We will be controlling for month and year to address seasonality and endogeneity, and fixed effects for state to get the within variation for each state. 
+
+The Logistic regression predicts the probability of an outcome that can only have two values and in this case how likely the age, sex or education level is to be employed. For the logit model, the coefficient gives the effect of a change on the index. The marginal effect gives the effect of a change in  on the probability that the dependent variable is 1 or that employed is true.
+
+```{r}
+ggplot(sex_data, aes(x = YEARMONTH, y = EMPCOUNT)) + geom_point() + geom_line() + geom_vline(xintercept = as.Date("2020-03-01")) +  xlab("Date (Year and Month)") + ylab("Standardized Employment Count") + ggtitle("Standardized Employment Count by Year and Month by Sex") + annotate("text", x = as.Date("2021-3-01"), y = 2, label = "COVID_Pandemic", parse = TRUE) + geom_smooth(method = 'lm') + facet_wrap(~SEX)
 ```
+In the above 3 plots we see the standardized employment for both males and females drop significantly once the pandemic began. It is worth noting here that we saw a lesser decline in females than we did in males at the start of the pandemic. Although, both sexes were seeing a general decline prior to the pandemic and continuing through it.
+
+
+```{r}
+ggplot(educ_data, aes(x = YEARMONTH, y = EMPCOUNT)) + geom_point() + geom_line() + geom_vline(xintercept = as.Date("2020-03-01")) +  xlab("Date (Year and Month)") + ylab("Standardized Employment Count") + ggtitle("Standardized Employment Count by Year and Month by Education") + geom_smooth(method = 'lm') + facet_wrap(~EDUC)
+```
+Looking at how education level effected employment in the pandemic we see all education levels on a steady decrease, however we see that the sharpest decreases in employment after the pandemic began were in individuals with a high school diploma or no diploma at all. 
+
+```{r}
+ggplot(age_data, aes(x = YEARMONTH, y = EMPCOUNT)) + geom_point() + geom_line() + geom_vline(xintercept = as.Date("2020-03-01")) +  xlab("Date (Year and Month)") + ylab("Standardized Employment Count") + ggtitle("Standardized Employment Count by Year and Month by Age") + geom_smooth(method = 'lm') + facet_wrap(~AGE)
+```
+Like all other demographics we see employment based on age in a steady decrease both prior to and post COVID pandemic. We also see that the younger age groups seem to have the sharpest decline once the pandemic began.
+
+```{r}
+# Who is working after covid?
+data = data %>% na.omit() %>% 
+  filter(AFTERCOVID == TRUE)
+worker_logit = feglm(data, ISEMP ~ AGE + SEX + EDUC + i(MONTH) + i(YEAR) | STATEFIP, weights = data$WTFINL, family = binomial(link = "logit"), se = 'hetero')
+```
+
+```{r}
+etable(worker_logit, keep = c("AGE", "SEX", "EDUC"), se = "hetero")
+```
+
+This alone only can give us an idea of the direction of the effect. From this alone we can get an idea of who is working and thus has money in a post-covid lockdown world.
+
+```{r}
+# Use coefficients to predict an index variable then run that through a link function to get its predicted value.
+data = data %>% 
+  mutate(index_predict = predict(worker_logit, type = "link")) %>% 
+  mutate(response_predict = predict(worker_logit, type = "response"))
+
+loglink = function(x) { exp(x) / (1 + exp(x)) }
+
+cor(loglink(data$index_predict), data$response_predict)
+```
+```{r}
+data %>% group_by(SEX) %>% summarize(index = mean(index_predict), resp = mean(response_predict))
+```
+As we see the difference between the index of men and women of (2.903 - 2.854) = 0.049 which is somewhat close to the coefficient seen above. 
+
+The difference in the predict probability of (0.9402 - 0.9373) = 0.0029. This should be similar to the linear probability model's coefficient as well as close to the marginal effects that we've had issues processing on our local machines.
+
+So men .29 percentage points more likely to be employed after COVID than women.
+
+Moving on to age...
+```{r}
+data %>% group_by(AGE) %>% summarize(index = mean(index_predict), resp = mean(response_predict))
+```
+We will not look at these relative to each other group but more for a general understanding. We see that there is still a great deal of people working within their age brackets. With the 18-24 and 65+ being the least likely to be working post-covid lockdown world. This could be due to more retirements and earlier age groups returning to school.
+
+```{r}
+data %>% group_by(EDUC) %>% summarize(index = mean(index_predict), resp = mean(response_predict))
+```
+
+Similarly to age we see that the more education an individual has the more likely they are to be employed in the post-covid lockdown world. 
+
+Overall, while Covid has resulted in some people leaving the labor force, the demographics of who is working has largely remained the same. If you are looking to market to people with jobs would want to focus on men and women who are between the ages of 25-65 and have at least a associates degree. 
