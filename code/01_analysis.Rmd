@@ -219,7 +219,6 @@ etable(industry_reg, keep=c("AFTERCOVID", "INDNAME"))
 # Model 2
 industry_reg_2 = feols(industry_data_2, AVGEMPCOUNTSTD ~ AFTERCOVID + RETAIL + AFTERCOVID*RETAIL + i(MONTH) + i(YEAR), vcov = 'hetero')
 wald(industry_reg_2,'AFTERCOVID', 'RETAIL')
-etable(industry_reg_2)
 etable(industry_reg_2, keep=c("AFTERCOVID", "RETAIL"))
 
 ```
@@ -232,17 +231,29 @@ For question 3, to understand who has money to spend we decided to look at wheth
 The Logistic regression predicts the probability of an outcome that can only have two values and in this case how likely the age, sex or education level is to be employed. For the logit model, the coefficient gives the effect of a change on the index. The marginal effect gives the effect of a change in  on the probability that the dependent variable is 1 or that employed is true.
 
 ```{r}
+sex_data = data %>% 
+  group_by(YEAR, MONTH, YEARMONTH, SEX) %>% 
+  summarize(EMPCOUNT = median(EMPCOUNTSTD))
+
 ggplot(sex_data, aes(x = YEARMONTH, y = EMPCOUNT)) + geom_point() + geom_line() + geom_vline(xintercept = as.Date("2020-03-01")) +  xlab("Date (Year and Month)") + ylab("Standardized Employment Count") + ggtitle("Standardized Employment Count by Year and Month by Sex") + annotate("text", x = as.Date("2021-3-01"), y = 2, label = "COVID_Pandemic", parse = TRUE) + geom_smooth(method = 'lm') + facet_wrap(~SEX)
 ```
 In the above 3 plots we see the standardized employment for both males and females drop significantly once the pandemic began. It is worth noting here that we saw a lesser decline in females than we did in males at the start of the pandemic. Although, both sexes were seeing a general decline prior to the pandemic and continuing through it.
 
 
 ```{r}
+educ_data = data %>% 
+  group_by(YEAR, MONTH, YEARMONTH, EDUC) %>% 
+  summarize(EMPCOUNT = median(EMPCOUNTSTD))
+
 ggplot(educ_data, aes(x = YEARMONTH, y = EMPCOUNT)) + geom_point() + geom_line() + geom_vline(xintercept = as.Date("2020-03-01")) +  xlab("Date (Year and Month)") + ylab("Standardized Employment Count") + ggtitle("Standardized Employment Count by Year and Month by Education") + geom_smooth(method = 'lm') + facet_wrap(~EDUC)
 ```
 Looking at how education level effected employment in the pandemic we see all education levels on a steady decrease, however we see that the sharpest decreases in employment after the pandemic began were in individuals with a high school diploma or no diploma at all. 
 
 ```{r}
+age_data = data %>% 
+  group_by(YEAR, MONTH, YEARMONTH, AGE) %>% 
+  summarize(EMPCOUNT = median(EMPCOUNTSTD))
+
 ggplot(age_data, aes(x = YEARMONTH, y = EMPCOUNT)) + geom_point() + geom_line() + geom_vline(xintercept = as.Date("2020-03-01")) +  xlab("Date (Year and Month)") + ylab("Standardized Employment Count") + ggtitle("Standardized Employment Count by Year and Month by Age") + geom_smooth(method = 'lm') + facet_wrap(~AGE)
 ```
 Like all other demographics we see employment based on age in a steady decrease both prior to and post COVID pandemic. We also see that the younger age groups seem to have the sharpest decline once the pandemic began.
